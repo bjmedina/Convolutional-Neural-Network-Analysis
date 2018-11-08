@@ -75,14 +75,22 @@ model.compile(loss="sparse_categorical_crossentropy",
               metrics=['accuracy'])
 
 
-# Initialize model
-
 #############################################
 # training the model
 
 with tf.device('/device:GPU:0'):
     #model.fit(X_train, Y_train, batch_size=32, epochs=40, validation_split=0.1, callbacks = [cp_callback])
-    model.fit(X_train, Y_train, batch_size=32, epochs=10, validation_split=0.1)
+
+    # instead of inputting the epochs, put a loop with fit inside,
+    # then keep track of accuracy at each epoch
+
+    epoch = 10
+
+    for i in range(1, epoch+1):
+        print("Epoch " + str(i) + "/" + str(epoch))
+        #model.fit returns a History object... what is that
+        model.fit(X_train, Y_train, batch_size=32, epochs=1, verbose = 0, validation_split=0.2)
+        #evaluate every time
 
 model.summary()
 model.save('cifar100_model.h5')
