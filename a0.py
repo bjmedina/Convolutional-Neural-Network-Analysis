@@ -4,13 +4,12 @@ import os
 import pickle
 import random
 import preproc
+from keras import metrics
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D, ZeroPadding2D
 from tensorflow.keras.callbacks import ModelCheckpoint
-
-
 
 ################################################
 # check point to save model once trained
@@ -32,10 +31,7 @@ X_test,  Y_test  = preproc.load_test_data()
 ###############################################
 # building the model
 
-
-
 model = Sequential()
-
 
 # 1st
 #                units  window_size  input_shape
@@ -54,7 +50,7 @@ model.add(Activation("relu"))
 model.add(MaxPooling2D(pool_size=(2,2)))
 
 
-# 5th (fully connected nn)
+# 4th (fully connected nn)
 model.add(Flatten()) #3d feature maps to 1d feature vectors
 model.add(Dense(64))
 model.add(Activation("relu"))
@@ -70,29 +66,40 @@ model.add(Dropout(0.25))
 model.add(Dense(10))
 model.add(Activation("softmax"))
 
+#Need to compare MSE and cross entropy
 model.compile(loss="sparse_categorical_crossentropy",
               optimizer="adam",
-              metrics=['accuracy'])
+              metrics=['accuracy', metrics.top_k_categorical_accuracy(y_true, y_pred, k=5)])
 
 
 #############################################
 # training the model
 
 with tf.device('/device:GPU:0'):
-    #model.fit(X_train, Y_train, batch_size=32, epochs=40, validation_split=0.1, callbacks = [cp_callback])
-
     # instead of inputting the epochs, put a loop with fit inside,
     # then keep track of accuracy at each epoch
 
-    epoch = 10
+    #model.fit returns a History object... what is that
+    h = model.fit(X_train, Y_train, batch_size=32, epochs=5, verbose = 1, validation_split=0.2)
 
-    for i in range(1, epoch+1):
-        print("Epoch " + str(i) + "/" + str(epoch))
-        #model.fit returns a History object... what is that
-        model.fit(X_train, Y_train, batch_size=32, epochs=1, verbose = 0, validation_split=0.2)
-        #evaluate every time
+#############################################
+# Plotting the losses
 
-model.summary()
+Y = h.history['val_loss']
+Z = h.history['loss']
+X = [i for i in range(1, len(Y)+1)]
+
+plt.plot(X, Y, label="Validation Loss")
+plt.plot(X, Z, label="Training Loss")
+plt.title("Validation Loss Vs. Training Loss")
+
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+
+plt.show()
+
+# save
+#model.summary()
 model.save('cifar100_model.h5')
 
 
