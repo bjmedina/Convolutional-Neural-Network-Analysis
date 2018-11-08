@@ -13,17 +13,7 @@ from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Conv2D,
 from tensorflow.keras.callbacks import ModelCheckpoint
 import time # needed for calculating elapsed time for a given model
 
-'''
-################################################
-# check point to save model once trained
-checkpoint_path = "training_1/cp.ckpt"
-checkpoint_dir = os.path.dirname(checkpoint_path)
 
-# Create checkpoint callback
-cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, 
-                                                 save_weights_only=True,
-                                                 verbose=1)
-'''
 ###############################################
 # loading dataset
 
@@ -38,35 +28,29 @@ Y_test  = utils.to_categorical(Y_test)
 ###############################################
 # building the model
 
-num_layers = range(3, 5)
-# NOTE: DON'T FORGET TO INCREASE THE NUMBER OF LAYERS
+num_layers = range(3, 12, 2)
 
 for layers in num_layers:
+
+    ############################################################
+    # Building the model
+    
     model = Sequential()
     
-    # 1st
+    # 1st layer (needs input sizes)
     #                units  window_size  input_shape
     model.add(Conv2D(128,    (3,3),       input_shape = X_train.shape[1:]))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2,2)))
 
-    # 2nd
-    model.add(Conv2D(128,    (3,3)))
-    model.add(Activation("relu"))
-    model.add(MaxPooling2D(pool_size=(2,2)))
+    for i in range(0, layers-1):
+        model.add(Conv2D(128,    (3,3)))
+        model.add(Activation("relu"))
+        model.add(MaxPooling2D(pool_size=(2,2)))
     
-    # 3rd
-    model.add(Conv2D(64,    (3,3)))
-    model.add(Activation("relu"))
-    model.add(MaxPooling2D(pool_size=(2,2)))
-    
-    
-    # 4th (fully connected nn)
+    # last layer (fully connected nn)
     model.add(Flatten()) #3d feature maps to 1d feature vectors
     model.add(Dense(64))
-    model.add(Activation("relu"))
-    model.add(Dropout(0.25))
-    model.add(Dense(128))
     model.add(Activation("relu"))
     model.add(Dropout(0.25))
     model.add(Dense(20))
@@ -76,11 +60,12 @@ for layers in num_layers:
     # output layer
     model.add(Dense(10))
     model.add(Activation("softmax"))
-    
+
+    # compare between cross entropy and mse
     loss_functions = ["categorical_crossentropy", "mean_squared_error"]
     
     for loss_function in loss_functions:
-        #Need to compare MSE and cross entropy
+        
         model.compile(loss=loss_function,
                       optimizer="adam",
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
@@ -88,12 +73,14 @@ for layers in num_layers:
         
         #############################################
         # training the model
-        
+
+        # need to increase dataset for each class
         with tf.device('/device:GPU:0'):
             
             # instead of inputting the epochs, put a loop with fit inside,
             # then keep track of accuracy at each epoch
             
+            # change this:         |||            |||              |         |            | 
             h = model.fit(X_train[:100], Y_train[:100], batch_size=2, epochs=1, verbose = 1, validation_split=0.2)
             
             #############################################
